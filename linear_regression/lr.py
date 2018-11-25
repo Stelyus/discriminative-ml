@@ -18,7 +18,6 @@ def show(x,y):
     plt.ylabel('Height')
     plt.show()
 
-# show(x,y)
 
 def mse(x,y,w,b):
     n = x.shape[0]
@@ -31,9 +30,10 @@ def gradient_descent(x, y, lr=.01):
     N, nb_var = x.shape
     w, b = np.zeros((nb_var, 1)) , 0
 
-    for i in range(10000):
+    fow i in range(10000):
         error = mse(x,y,w, b)
         print("Error %s" % error)
+
         # Using the chain rule derivative
         db = 1/N * np.sum((x@w+b)-y)
         dw = 1/N * np.sum(x*((x@w+b)-y))
