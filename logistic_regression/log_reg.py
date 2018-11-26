@@ -34,32 +34,37 @@ def cost_function(w,x,y):
         cost += ys * np.log(hx) + (1-ys) * np.log(1 - hx)
     return - 1/x.shape[0] *  cost
 
-def gradient_descent(x, y, lr=.01):
+
+def hessian_matrix(x,y,w):
+    yhat = predict(w,x)
+    ret = x.T.dot(np.diag(np.multiply(yhat, (1 - yhat)).reshape(x.shape[0]))).dot(x)
+    return ret
+
+def gradient_descent(x, y, lr=.015):
     ones = np.ones((x.shape[0], x.shape[1] -1))
     x = np.concatenate((x,ones),axis=-1)
     w = np.zeros((x.shape[1],1))
     y = y.reshape(-1,1)
-    epoch = 1000000
+    epoch = 10_000
+    n = x.shape[0] 
+
 
     for i in range(epoch):
         cost = cost_function(w,x,y)
         print("Error function {}".format(cost))
-
-        N = x.shape[0] 
         pred = predict(w,x)
         gradient = np.dot(x.T, pred - y)
 
-        gradient /= N
-        gradient *= lr
-        w -= gradient
+        gradient /= n
+        d2j = hessian_matrix(x,y,w)
+        newton = np.linalg.inv(d2j) @ gradient
+        w -= newton
 
 
-    # Prediction 
-    prediction = np.vectorize(lambda x: 1 if x < .5 else 0)(predict(w,x))
+    # Prediction
+    prediction = np.vectorize(lambda x: 0 if x < .5 else 1)(predict(w,x))
     succ  = 0
     for i in range(prediction.shape[0]):
-        print(prediction[i])
-        print(y[i][0])
         succ += prediction[i] == y[i][0]
     print("Acc {}/{}".format(succ, x.shape[0]))
 
