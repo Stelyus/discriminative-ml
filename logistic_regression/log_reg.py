@@ -8,7 +8,12 @@ from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
-## Logistic regression
+'''
+Logistic regression
+'''
+
+
+
 def plot_points(xy, labels):
     for i, label in enumerate(set(labels)):
         points = np.array([xy[j,:] for j in range(len(xy)) if labels[j] == label])
