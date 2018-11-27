@@ -15,6 +15,7 @@ Softmax regression / Multinomial logistic regression
 
 References:
     http://deeplearning.stanford.edu/tutorial/supervised/SoftmaxRegression/
+    http://ufldl.stanford.edu/wiki/index.php/Softmax_Regression
 '''
 
 MARKERS = ['+', 'x', '.']
@@ -37,20 +38,27 @@ def cost_function(x,y,w,K):
 
 
 
+def predict(x,y,w, K):
+    n = x.shape[0] 
+    
+    u = np.exp(x @ w.T)
+    v = np.sum(u, axis=-1).reshape(-1,1)
+    softmax = u / v
+    true_label = y.argmax(axis=-1)
+    predicted_label = softmax.argmax(axis=-1)
+    prediction = np.count_nonzero(true_label == predicted_label)
+    print("Prediction: {} / {}".format(prediction, y.shape[0]))
+    
+
+
 def cost_refractor(x,y,w,K):
     n = x.shape[0] 
     
-    print(np.max(x))
-    print(np.min(x))
-    print(w)
     u = np.exp(x @ w.T)
     v = np.sum(u, axis=-1).reshape(-1,1)
     
     softmax = u / v
     softmax += 0.001
-    if np.isnan(np.log(softmax)).any():
-        print("Found it")
-        sys.exit()
     return - 1/n * np.sum(np.diag(np.log(softmax) @ y.T))
 
 # Gradient descent
@@ -68,23 +76,28 @@ def softmax_reg(x,y,K,lr=.01,precision=.01):
     '''
     w = np.random.uniform(-1,1, (K, x.shape[1]))
 
+    predict(x,y,w,K)
     while i < EPOCH:
         cost = cost_refractor(x,y,w,K)
-        print("Iteration {0}, error cost: {1:.2f}".format(i, cost))
+        # print("Iteration {0}, error cost: {1:.2f}".format(i, cost))
+        
         u = np.exp(x @ w.T)
         v = np.sum(u, axis=-1).reshape(-1,1)
         # softmax (133,3)
         softmax = u / v
         
-        # p (133,3)
-        p = y - softmax
+        # rhs (133,3)
+        rhs = y - softmax
+        # rhs[:,0] (133, 1)
+     
+        gradient = np.vstack((rhs[:,0] @ x, rhs[:,1] @ x, rhs[:,2] @ x))
+        gradient /= N
         
-        #res (133,133)
-        res = x @ p.T
-        
-        gradient = -1/N * np.sum(np.diag(res))
-        w = w - lr * gradient
+        print(gradient)
+        w -= lr * gradient
         i += 1 
+
+    predict(x,y,w,K)
     return w
    
 
