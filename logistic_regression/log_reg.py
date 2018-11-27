@@ -8,9 +8,6 @@ from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
-
-
-
 ## Logistic regression
 def plot_points(xy, labels):
     for i, label in enumerate(set(labels)):
@@ -25,6 +22,7 @@ def predict(w, x):
     z = x @ w
     sigmoid  = 1  / (1 + np.exp(- z))
     return sigmoid
+
 
 # Cross entropy
 def cost_function(w,x,y):
@@ -80,9 +78,6 @@ def plot_descision_boundary(w,x,y):
     h = .01
     x_min, x_max = x[:,0].min() - 1, x[:,0].max() + 1
     y_min, y_max = x[:,1].min() - 1, x[:,1].max() + 1
-    # xx, yy shape (144,221)
-    # arange x => (221,)
-    # arange y => (144,)
     xx, yy = np.meshgrid(np.arange(x_min, x_max,h), np.arange(y_min, y_max,h))
     
     xy_pairs = np.c_[xx.ravel(), yy.ravel()]
@@ -102,9 +97,6 @@ def plot_descision_boundary(w,x,y):
     plt.contour(xx,yy,Z,colors='black')
     plt.show()
 
-
-
-
 data = pd.read_csv('data.txt')
 
 reduced = data[data['class'] <= 2]
@@ -121,8 +113,6 @@ print("ytest shape {}".format(ytest.shape))
 MARKERS = ['+', 'x', '.']
 COLORS = ['red', 'green', 'blue']
 
-
-# ytrain = np.vectorize(lambda x: {0:-1,1:1}[x])(ytrain)
 w = train_newton(Xtrain, ytrain)
 
 # Test set
