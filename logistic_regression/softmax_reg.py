@@ -61,9 +61,10 @@ def cost_refractor(x,y,w,K):
     softmax += 0.001
     return - 1/n * np.sum(np.diag(np.log(softmax) @ y.T))
 
+
 # Gradient descent
 def softmax_reg(x,y,K,lr=.01,precision=.01):
-    EPOCH = 1000
+    EPOCH = 10_000
     N = x.shape[0]
     ones = np.ones((N, 1))
     x = np.concatenate([x, ones], axis=-1)
@@ -89,11 +90,9 @@ def softmax_reg(x,y,K,lr=.01,precision=.01):
         # rhs (133,3)
         rhs = y - softmax
         # rhs[:,0] (133, 1)
-     
-        gradient = np.vstack((rhs[:,0] @ x, rhs[:,1] @ x, rhs[:,2] @ x))
-        gradient /= N
         
-        print(gradient)
+        gradient = np.vstack((rhs[:,0] @ x, rhs[:,1] @ x, rhs[:,2] @ x))
+        gradient /= - N
         w -= lr * gradient
         i += 1 
 
