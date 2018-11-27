@@ -4,9 +4,13 @@ import pickle
 import numpy
 import sys
 import matplotlib.pyplot as plt
+'''
 from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
+'''
+
+
 
 np.seterr(all='print')
 
@@ -21,24 +25,7 @@ References:
 MARKERS = ['+', 'x', '.']
 COLORS = ['red', 'green', 'blue']
 
-
-'''
-Not used anymore
-def cost_function(x,y,w,K):
-    cost, N = 0, x.shape[0]
-    for sample in range(N):
-        yi, xi = y[sample,:], x[sample,:]
-        yi = yi.reshape(-1,1) 
-        theta_t = w.T @ yi
-        u = np.exp(theta_t.T @ xi)
-        v = np.sum(np.exp(w @ xi))
-        cost += np.log(u / v)
-    return - 1/N * cost
-'''
-
-
-
-def predict(x,y,w, K):
+def score(x,y,w, K):
     n = x.shape[0] 
     
     u = np.exp(x @ w.T)
@@ -51,7 +38,18 @@ def predict(x,y,w, K):
     
 
 
-def cost_refractor(x,y,w,K):
+def predict(x,w):
+    ones = np.ones((x.shape[0], 1))
+    x = np.concatenate((x,ones),axis=-1)
+    
+    u = np.exp(x @ w.T)
+    v = np.sum(u, axis=-1).reshape(-1,1)
+    
+    softmax = u / v
+    return softmax.argmax(axis=-1)
+
+
+def cost_function(x,y,w,K):
     n = x.shape[0] 
     
     u = np.exp(x @ w.T)
@@ -61,45 +59,59 @@ def cost_refractor(x,y,w,K):
     softmax += 0.001
     return - 1/n * np.sum(np.diag(np.log(softmax) @ y.T))
 
-
 # Gradient descent
-def softmax_reg(x,y,K,lr=.01,precision=.01):
-    EPOCH = 10_000
-    N = x.shape[0]
-    ones = np.ones((N, 1))
-    x = np.concatenate([x, ones], axis=-1)
-    i = 1
-    # delta = precision + 1
-    
+def softmax_reg(x,y,K,lr=.01):
     '''
+            W structure
             n_class x n_weights
             w.shape (3,3)
     '''
+    
+    EPOCH = 100_000
+    N = x.shape[0]
+    ones = np.ones((N, 1))
+    x = np.concatenate([x, ones], axis=-1)
     w = np.random.uniform(-1,1, (K, x.shape[1]))
-
-    predict(x,y,w,K)
-    while i < EPOCH:
-        cost = cost_refractor(x,y,w,K)
-        # print("Iteration {0}, error cost: {1:.2f}".format(i, cost))
+    score(x,y,w,K)
+    
+    for i in range(EPOCH):
+        cost = cost_function(x,y,w,K)
+        if i % 100 == 0:
+            print("Iteration {0}, error cost: {1:.2f}".format(i, cost))
         
         u = np.exp(x @ w.T)
         v = np.sum(u, axis=-1).reshape(-1,1)
-        # softmax (133,3)
         softmax = u / v
-        
-        # rhs (133,3)
         rhs = y - softmax
-        # rhs[:,0] (133, 1)
+        gradient = np.zeros(w.shape)
         
-        gradient = np.vstack((rhs[:,0] @ x, rhs[:,1] @ x, rhs[:,2] @ x))
+        # Could use vstack but for genericity we use a for
+        for j in range(0,K):
+            gradient[j,:] = rhs[:,j] @ x
+        
         gradient /= - N
         w -= lr * gradient
-        i += 1 
 
-    predict(x,y,w,K)
+    score(x,y,w,K)
     return w
    
+def plot_boundaries(x,y,w, h=.1):
+    x_min, x_max  = np.min(x[:,0]) - 1, np.max(x[:,0]) + 1
+    y_min, y_max = np.min(y[:,1]) - 1, np.max(x[:,1]) + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+    xy_pairs = np.c_[xx.ravel(),yy.ravel()]
+    Z = predict(xy_pairs, w).reshape(xx.shape)
+    
+    y = y.argmax(axis=1)
+    for i, label in enumerate(set(y)):
+        points = np.array([x[j,:] for j in range(len(x)) if y[j] == label])
+        marker = MARKERS[i % len(MARKERS)]
+        color = COLORS[i % len(COLORS)]
+        plt.scatter(points[:,0], points[:,1], marker=marker, color=color)
 
+    plt.contour(xx, yy, Z, colors='black')
+    plt.show()
+        
 
 
 def plot_points(xy, labels):
@@ -127,5 +139,5 @@ print("Xtest shape {}".format(Xtest.shape))
 print("ytest shape {}".format(ytest.shape))
 print("-" * 15)
 
-#plot_points(Xtrain, ytrain.argmax(axis=1))
-softmax_reg(Xtrain, ytrain, K)
+w = softmax_reg(Xtrain, ytrain, K)
+plot_boundaries(Xtrain, ytrain, w)

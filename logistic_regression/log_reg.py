@@ -10,9 +10,9 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 '''
 Logistic regression
+References:
+    https://ml-cheatsheet.readthedocs.io/en/latest/logistic_regression.html
 '''
-
-
 
 def plot_points(xy, labels):
     for i, label in enumerate(set(labels)):
@@ -119,7 +119,7 @@ MARKERS = ['+', 'x', '.']
 COLORS = ['red', 'green', 'blue']
 
 w = train_newton(Xtrain, ytrain)
-
+plot_descision_boundary(w,Xtrain, ytrain)
 # Test set
 ones = np.ones((Xtest.shape[0], 1))
 Xtest = np.concatenate((Xtest, ones),axis=-1)
