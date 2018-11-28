@@ -114,10 +114,11 @@ class SoftmaxRegression():
         EPOCH = 10_000
         N = self.x.shape[0]
         acc = self.score(self.x,self.y)
-        print("Accurarcy train set: {0:.2f}".format(acc))
+        #print("Accurarcy train set: {0:.2f}".format(acc))
         
         for i in range(EPOCH):
             cost = self._cost_function(self.x,self.y)
+            
             '''
             if i % 500 == 0:
                 print("Iteration {0}, error cost: {1:.2f}".format(i, cost))
@@ -138,6 +139,7 @@ class SoftmaxRegression():
 
             # Add penalty
             gradient += self.C * self.w
+            
             self.w -= lr * gradient
 
         acc = self.score(self.x, self.y)
@@ -168,9 +170,11 @@ print("ytrain shape {}".format(ytrain.shape))
 
 print("Xtest shape {}".format(Xtest.shape))
 print("ytest shape {}".format(ytest.shape))
-print("-" * 15)
 
-def test(C):
+SLASH = 15
+print("-" * SLASH)
+
+def test_different_regularizer(C):
     sr = SoftmaxRegression(Xtrain, ytrain, K, C=C)
     sr.run()
     ones = np.ones((X.shape[0], 1))
@@ -179,16 +183,9 @@ def test(C):
     ones_test= np.ones((Xtest.shape[0], 1))
     Xtest_ones = np.concatenate([Xtest,ones_test], axis=-1)
     print("Accuracy test set: {0:.2f}".format(sr.score(Xtest_ones,ytest)))
-    print("Total accuracy: {0:.2f}".format(sr.score(X_ones,y)))
 
-print("-" * 10)
-print("Testint for C=0")
-test(0)
 
-print("-" * 10)
-print("Testint for C=2")
-test(2)
-
-print("-" * 10)
-print("Testint for C=10")
-test(10)
+for C in [0,2,10,100]:
+    print("-" *SLASH)
+    print("Testint for C={}".format(C))
+    test_different_regularizer(C)
