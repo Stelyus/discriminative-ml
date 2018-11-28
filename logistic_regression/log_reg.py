@@ -14,6 +14,93 @@ References:
     https://ml-cheatsheet.readthedocs.io/en/latest/logistic_regression.html
 '''
 
+class LogisticRegression():
+    def __init__(self,x,y):
+        ones = np.ones((x.shape[0], x.shape[1] -1))
+        x = np.concatenate((x,ones),axis=-1)
+        
+        # Plotting
+        global MARKERS = ['+', 'x', '.']
+        global COLORS = ['red', 'green', 'blue']
+        
+        self.y = y.reshape(-1,1)
+        self.x = x
+        self.w = np.zeros((x.shape[1],1))
+
+    def _predict(self, x):
+        z = x @ self.w
+        sigmoid  = 1  / (1 + np.exp(- z))
+        return sigmoid
+
+    # Cross entropy
+    def _cost_function(self):
+        N, cost= self.x.shape[0], 0
+        for sample in range(N):
+            hx,  ys = self._predict(self.x[sample,:]), self.y[sample]
+            cost += ys * np.log(hx) + (1-ys) * np.log(1 - hx)
+        return - 1/N *  cost
+
+    # Used for newton method
+    def _hessian_matrix(self):
+        N, cost = self.x.shape[0], np.zeros((3,3))
+        for sample in range(N):
+            xx = self.x[sample,:].reshape(-1,1)
+            yy = self._predict(xx.T)
+            cost += xx @ yy * (1-yy) @ xx.T
+        return cost
+
+
+    def plot_descision_boundary(self,x,y):
+        h = .01
+        x_min, x_max = x[:,0].min() - 1, x[:,0].max() + 1
+        y_min, y_max = x[:,1].min() - 1, x[:,1].max() + 1
+        xx, yy = np.meshgrid(np.arange(x_min, x_max,h), np.arange(y_min, y_max,h))
+        
+        xy_pairs = np.c_[xx.ravel(), yy.ravel()]
+        ones = np.ones((xy_pairs.shape[0], 1))
+        xy_pairs = np.concatenate([xy_pairs, ones], axis=-1)
+        Z = self._predict(xy_pairs).reshape(xx.shape)
+        Z = np.vectorize(lambda x: 1 if x > .5 else 0)(Z)
+
+        # Plotting first point
+        for i, label in enumerate(set(y)):
+            points = np.array([x[j,:] for j in range(len(x)) if y[j] == label])
+            marker = MARKERS[i % len(MARKERS)]
+            color = COLORS[i % len(COLORS)]
+            plt.scatter(points[:,0], points[:,1], marker=marker, color=color)
+        
+        # Plotting the contour
+        plt.contour(xx,yy,Z,colors='black')
+        plt.show()
+
+        
+    # Using Newton methods
+    def run(self,lr=.015, eps=.01, epoch=100):
+        n, i = self.x.shape[0], 1
+        diff = eps + 1
+
+        while i < epoch or diff > eps:
+            i += 1
+            cost = self._cost_function()
+            #print("Error function {}".format(cost))
+            pred = self._predict(self.x)
+            gradient = np.dot(self.x.T, pred - self.y)
+
+            gradient /= n
+            d2j = self._hessian_matrix()
+            newton = np.linalg.inv(d2j) @ gradient
+            self.w -= newton
+            diff = np.linalg.norm(newton)
+
+        # Prediction
+        mapping = np.vectorize(lambda x: 0 if x < .5 else 1)
+        prediction = mapping(self._predict(self.x))
+        succ  = 0
+        for i in range(prediction.shape[0]):
+            succ += prediction[i] == self.y[i][0]
+        print("Acc {}/{}".format(succ, n))
+
+
 def plot_points(xy, labels):
     for i, label in enumerate(set(labels)):
         points = np.array([xy[j,:] for j in range(len(xy)) if labels[j] == label])
@@ -21,86 +108,8 @@ def plot_points(xy, labels):
         color = COLORS[i % len(COLORS)]
         plt.scatter(points[:,0], points[:,1], marker=marker, color=color)
     plt.show()
-
-
-def predict(w, x):
-    z = x @ w
-    sigmoid  = 1  / (1 + np.exp(- z))
-    return sigmoid
-
-
-# Cross entropy
-def cost_function(w,x,y):
-    cost = 0
-    for sample in range(x.shape[0]):
-        hx,  ys = predict(w,  x[sample,:]), y[sample]
-        cost += ys * np.log(hx) + (1-ys) * np.log(1 - hx)
-    return - 1/x.shape[0] *  cost
-
-
-# Used for newton method
-def hessian_matrix(x,y,w):
-    cost = np.zeros((3,3))
-    for sample in range(x.shape[0]):
-        xx = x[sample,:].reshape(-1,1)
-        yy = predict(w,xx.T)
-        cost += xx @ yy * (1-yy) @ xx.T
-    return cost
-
-# Using Newton methods
-def train_newton(x, y, lr=.015, eps=.01):
-    ones = np.ones((x.shape[0], x.shape[1] -1))
-    x = np.concatenate((x,ones),axis=-1)
-    w = np.zeros((x.shape[1],1))
-    y = y.reshape(-1,1)
-    epoch = 100
-    n = x.shape[0] 
-    i = 1
-    diff = eps + 1
-
-    while i < epoch or diff > eps:
-        i += 1  
-        cost = cost_function(w,x,y)
-        #print("Error function {}".format(cost))
-        pred = predict(w,x)
-        gradient = np.dot(x.T, pred - y)
-
-        gradient /= n
-        d2j = hessian_matrix(x,y,w)
-        newton = np.linalg.inv(d2j) @ gradient
-        w -= newton
-        diff = np.linalg.norm(newton)
-
-    # Prediction
-    prediction = np.vectorize(lambda x: 0 if x < .5 else 1)(predict(w,x))
-    succ  = 0
-    for i in range(prediction.shape[0]):
-        succ += prediction[i] == y[i][0]
-    print("Acc {}/{}".format(succ, x.shape[0]))
-    return w
-
-def plot_descision_boundary(w,x,y):
-    h = .01
-    x_min, x_max = x[:,0].min() - 1, x[:,0].max() + 1
-    y_min, y_max = x[:,1].min() - 1, x[:,1].max() + 1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max,h), np.arange(y_min, y_max,h))
     
-    xy_pairs = np.c_[xx.ravel(), yy.ravel()]
-    ones = np.ones((xy_pairs.shape[0], 1))
-    xy_pairs = np.concatenate([xy_pairs, ones], axis=-1)
-    Z = predict(w,xy_pairs).reshape(xx.shape)
-    Z = np.vectorize(lambda x: 1 if x > .5 else 0)(Z)
 
-    # Plotting first point
-    for i, label in enumerate(set(y)):
-        points = np.array([x[j,:] for j in range(len(x)) if y[j] == label])
-        marker = MARKERS[i % len(MARKERS)]
-        color = COLORS[i % len(COLORS)]
-        plt.scatter(points[:,0], points[:,1], marker=marker, color=color)
-    
-    # Plotting the contour
-    plt.contour(xx,yy,Z,colors='black')
-    plt.show()
 
 data = pd.read_csv('data.txt')
 
@@ -114,10 +123,14 @@ print("ytrain  shape {}".format(ytrain.shape))
 print("Xtest shape {}".format(Xtest.shape))
 print("ytest shape {}".format(ytest.shape))
 
-# Plotting
-MARKERS = ['+', 'x', '.']
-COLORS = ['red', 'green', 'blue']
 
+'''
+lg = LogisticRegression(Xtrain, ytrain)
+lg.run()
+lg.plot_descision_boundary(X, y)
+'''
+
+'''
 w = train_newton(Xtrain, ytrain)
 plot_descision_boundary(w,Xtrain, ytrain)
 # Test set
@@ -129,3 +142,4 @@ predictions  = np.vectorize(lambda x: 1 if x > .5 else 0)(predictions)
 print("Accurarcy: {}".format(accuracy_score(ytest, predictions)))
 print("Precision: {}".format(precision_score(ytest, predictions, average='macro')))
 print("Recall: {}".format(recall_score(ytest, predictions, average='macro')))
+'''

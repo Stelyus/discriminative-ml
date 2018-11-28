@@ -4,11 +4,10 @@ import pickle
 import numpy
 import sys
 import matplotlib.pyplot as plt
-'''
+
 from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-'''
 
 
 
@@ -67,7 +66,7 @@ def softmax_reg(x,y,K,lr=.01):
             w.shape (3,3)
     '''
     
-    EPOCH = 100_000
+    EPOCH = 110_000
     N = x.shape[0]
     ones = np.ones((N, 1))
     x = np.concatenate([x, ones], axis=-1)
@@ -95,7 +94,7 @@ def softmax_reg(x,y,K,lr=.01):
     score(x,y,w,K)
     return w
    
-def plot_boundaries(x,y,w, h=.1):
+def plot_boundaries(x,y,w, h=.01):
     x_min, x_max  = np.min(x[:,0]) - 1, np.max(x[:,0]) + 1
     y_min, y_max = np.min(y[:,1]) - 1, np.max(x[:,1]) + 1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
@@ -108,7 +107,7 @@ def plot_boundaries(x,y,w, h=.1):
         marker = MARKERS[i % len(MARKERS)]
         color = COLORS[i % len(COLORS)]
         plt.scatter(points[:,0], points[:,1], marker=marker, color=color)
-
+    
     plt.contour(xx, yy, Z, colors='black')
     plt.show()
         
