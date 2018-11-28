@@ -7,25 +7,28 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-
 '''
 Logistic regression
 References:
     https://ml-cheatsheet.readthedocs.io/en/latest/logistic_regression.html
+    https://stats.stackexchange.com/questions/278771/how-is-the-cost-function-from-logistic-regression-derivated
 '''
 
 class LogisticRegression():
-    def __init__(self,x,y):
+    def __init__(self,x,y,opti='gradient'):
         ones = np.ones((x.shape[0], x.shape[1] -1))
         x = np.concatenate((x,ones),axis=-1)
         
         # Plotting
-        global MARKERS = ['+', 'x', '.']
-        global COLORS = ['red', 'green', 'blue']
+        global MARKERS, COLORS
+        
+        MARKERS = ['+', 'x', '.']
+        COLORS = ['red', 'green', 'blue']
         
         self.y = y.reshape(-1,1)
         self.x = x
         self.w = np.zeros((x.shape[1],1))
+        self.opti = opti
 
     def _predict(self, x):
         z = x @ self.w
@@ -75,10 +78,50 @@ class LogisticRegression():
 
         
     # Using Newton methods
-    def run(self,lr=.015, eps=.01, epoch=100):
+    def run(self,lr=.015, eps=.01, epoch=1_000):
+        if self.opti == 'newton':
+            self._newton(lr, eps, epoch)
+        elif self.opti == 'gradient':
+            self._gradient(lr, eps, epoch)
+        else:
+            raise ValueError("Wrong optimization")
+    
+
+    def _gradient(self,lr,eps,epoch):
+        n = self.x.shape[0]
+        diff = eps + 1
+        mapping = np.vectorize(lambda x: 0 if x < .5 else 1)
+
+        prediction = mapping(self._predict(self.x))
+        succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
+        print("Acc {}/{}".format(succ, n))
+        
+        for _ in range(epoch):
+            cost = self._cost_function()
+            print("Error function {}".format(cost))
+            pred = self._predict(self.x)
+            gradient = np.dot(self.x.T, pred - self.y)
+            
+            gradient /= n
+            gradient *= lr
+            self.w -= gradient
+        
+        # Prediction
+        prediction = mapping(self._predict(self.x))
+        succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
+        print("Acc {}/{}".format(succ, n))
+
+
+    def _newton(self, lr, eps, epoch):
         n, i = self.x.shape[0], 1
         diff = eps + 1
 
+        mapping = np.vectorize(lambda x: 0 if x < .5 else 1)
+
+        prediction = mapping(self._predict(self.x))
+        succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
+        print("Acc {}/{}".format(succ, n))
+        
         while i < epoch or diff > eps:
             i += 1
             cost = self._cost_function()
@@ -93,23 +136,9 @@ class LogisticRegression():
             diff = np.linalg.norm(newton)
 
         # Prediction
-        mapping = np.vectorize(lambda x: 0 if x < .5 else 1)
         prediction = mapping(self._predict(self.x))
-        succ  = 0
-        for i in range(prediction.shape[0]):
-            succ += prediction[i] == self.y[i][0]
+        succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
         print("Acc {}/{}".format(succ, n))
-
-
-def plot_points(xy, labels):
-    for i, label in enumerate(set(labels)):
-        points = np.array([xy[j,:] for j in range(len(xy)) if labels[j] == label])
-        marker = MARKERS[i % len(MARKERS)]
-        color = COLORS[i % len(COLORS)]
-        plt.scatter(points[:,0], points[:,1], marker=marker, color=color)
-    plt.show()
-    
-
 
 data = pd.read_csv('data.txt')
 
@@ -124,20 +153,11 @@ print("Xtest shape {}".format(Xtest.shape))
 print("ytest shape {}".format(ytest.shape))
 
 
-'''
-lg = LogisticRegression(Xtrain, ytrain)
+lg = LogisticRegression(Xtrain, ytrain, opti='gradient')
 lg.run()
 lg.plot_descision_boundary(X, y)
-'''
 
 '''
-w = train_newton(Xtrain, ytrain)
-plot_descision_boundary(w,Xtrain, ytrain)
-# Test set
-ones = np.ones((Xtest.shape[0], 1))
-Xtest = np.concatenate((Xtest, ones),axis=-1)
-predictions  = predict(w, Xtest)
-predictions  = np.vectorize(lambda x: 1 if x > .5 else 0)(predictions)
 
 print("Accurarcy: {}".format(accuracy_score(ytest, predictions)))
 print("Precision: {}".format(precision_score(ytest, predictions, average='macro')))
