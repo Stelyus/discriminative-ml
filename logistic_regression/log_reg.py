@@ -4,9 +4,11 @@ import pickle
 import numpy
 import sys
 import matplotlib.pyplot as plt
+
 from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
+
 '''
 Logistic regression
 References:
@@ -156,6 +158,7 @@ print("ytest shape {}".format(ytest.shape))
 lg = LogisticRegression(Xtrain, ytrain, opti='gradient')
 lg.run()
 lg.plot_descision_boundary(X, y)
+
 
 '''
 
