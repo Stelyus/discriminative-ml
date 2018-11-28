@@ -21,10 +21,18 @@ References:
 
 
 class SoftmaxRegression():
-    def __init__(self,x,y,K,opti='gradient',C=.01):
+    def __init__(self,x,y,K,opti='gradient',C=.00):
+        '''
+            x: data
+            y: label
+            K: number of class
+            C: regularizer coefficients
+            opti: Optimization choosen
+        '''
+        
         global MARKERS
         global COLORS
-
+        
         MARKERS = ['+', 'x', '.']
         COLORS = ['red', 'green', 'blue']
         
@@ -83,6 +91,7 @@ class SoftmaxRegression():
     def run(self):
         if self.opti == "gradient":
             self._gradient()
+    
 
     def _predict(self,x):
         ones = np.ones((x.shape[0], 1))
@@ -103,15 +112,16 @@ class SoftmaxRegression():
         '''
         
         EPOCH = 10_000
-        #EPOCH = 110_000
         N = self.x.shape[0]
         acc = self.score(self.x,self.y)
         print("Accurarcy train set: {0:.2f}".format(acc))
         
         for i in range(EPOCH):
             cost = self._cost_function(self.x,self.y)
+            '''
             if i % 500 == 0:
                 print("Iteration {0}, error cost: {1:.2f}".format(i, cost))
+            '''
             
             u = np.exp(self.x @ self.w.T)
             v = np.sum(u, axis=-1).reshape(-1,1)
@@ -124,6 +134,10 @@ class SoftmaxRegression():
                 gradient[j,:] = rhs[:,j] @ self.x
             
             gradient /= - N
+            
+
+            # Add penalty
+            gradient += self.C * self.w
             self.w -= lr * gradient
 
         acc = self.score(self.x, self.y)
@@ -140,10 +154,13 @@ X = data.as_matrix()
 std = np.std(X,axis=0)
 mean = np.mean(X,axis=0)
 X = (X - mean) / std
+
+
 y = data.as_matrix(columns=['class'])
 y = label_binarize(y, range(1,K+1))
 
-Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.25)
+Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.25,
+random_state=42)
 ytrain = label_binarize(ytrain, range(1, K+1))
 
 print("Xtrain shape {}".format(Xtrain.shape))
@@ -153,13 +170,25 @@ print("Xtest shape {}".format(Xtest.shape))
 print("ytest shape {}".format(ytest.shape))
 print("-" * 15)
 
+def test(C):
+    sr = SoftmaxRegression(Xtrain, ytrain, K, C=C)
+    sr.run()
+    ones = np.ones((X.shape[0], 1))
+    X_ones = np.concatenate([X,ones], axis=-1)
 
-sr = SoftmaxRegression(Xtrain, ytrain, K)
-sr.run()
-ones = np.ones((X.shape[0], 1))
-X_ones = np.concatenate([X,ones], axis=-1)
+    ones_test= np.ones((Xtest.shape[0], 1))
+    Xtest_ones = np.concatenate([Xtest,ones_test], axis=-1)
+    print("Accuracy test set: {0:.2f}".format(sr.score(Xtest_ones,ytest)))
+    print("Total accuracy: {0:.2f}".format(sr.score(X_ones,y)))
 
-ones_test= np.ones((Xtest.shape[0], 1))
-Xtest_ones = np.concatenate([Xtest,ones_test], axis=-1)
-print("Accuracy test set: {0:.2f}".format(sr.score(Xtest_ones,ytest)))
-print("Total accuracy: {0:.2f}".format(sr.score(X_ones,y)))
+print("-" * 10)
+print("Testint for C=0")
+test(0)
+
+print("-" * 10)
+print("Testint for C=2")
+test(2)
+
+print("-" * 10)
+print("Testint for C=10")
+test(10)
