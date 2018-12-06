@@ -1,75 +1,51 @@
 import numpy as np
-import pandas as pd
-import pickle
-import numpy
-import sys
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import label_binarize
-from sklearn.model_selection import train_test_split
+from sklearn.datasets.samples_generator import make_blobs
+
+X, y = make_blobs(n_samples=50, n_features=2, centers=2, cluster_std=1.05, random_state=40)
 
 
-## HARD MARGIN
+X1 = np.c_[np.ones((X.shape[0])), X] 
 
-def plot_points(xy, labels):
-    for i, label in enumerate(set(labels)):
-        points = np.array([xy[j,:] for j in range(len(xy)) if labels[j] == label])
-        marker = MARKERS[i % len(MARKERS)]
-        color = COLORS[i % len(COLORS)]
-        plt.scatter(points[:,0], points[:,1], marker=marker, color=color)
+''' 
+   X1  (50, 3)
+   y   (50,)
+'''
+def perceptron_algorithm(x, y):
+    y = np.vectorize(lambda x: 1 if x == 1 else -1)(y)
+    y = y.reshape(-1,1) # 50,1
+    # w = np.zeros((x.shape[1],1)) # 3,1
+    w = np.random.uniform(-1,1,(x.shape[1],1))
+    n = x.shape[0]
+    epoch = 100
+    for _ in range(epoch):
+        for i in range(n):
+            res = np.dot(w.reshape(3,), x[i])
+            if np.sign(res) != np.sign(y[i]):
+                w = w + .02 * np.sign(res) * res
+        predict(x,y,w)
+    return w
+
+def predict(x,y,w):
+    res = x @ w
+    score = np.count_nonzero(np.sign(res) == np.sign(y))
+    print("Score {}".format(score / res.shape[0]))
+
+
+def plot(x,y,w):
+    step = .01
+    xmax, ymax = x[:,1].max() - 1, x[:,2].max() + 1
+    xmin, ymin = x[:,1].min() - 1, x[:,2].min() - 1
+    
+    xx, yy = np.meshgrid(np.arange(xmin,xmax,step), np.arange(ymin,ymax,step))
+    xy = np.c_[xx.ravel(), yy.ravel()]
+    xy = np.c_[np.ones(xy.shape[0]), xy]
+    # xy shape (1163052, 3)
+    res = np.sign((xy @ w).reshape(xx.shape))
+    plt.contour(xx,yy,res,colors='black')
+    plt.scatter(X1[:,1], X1[:,2], marker='o', c=y)
+    plt.axis([-5,10,-12,-1])
     plt.show()
 
-#plot_points(Xtrain[:10,:], ytrain[:10])
-
-def acc(w, b, x, y):
-    succ  = 0
-    for sample in range(x.shape[0]):
-        succ += y[sample][0] == np.sign(np.dot(w, x[sample,:]) - b)
-    return succ / x.shape[0]
-    
-def gradient_descent(x, y, lr=.001):
-    y = y.reshape(-1,1)
-    w = np.random.uniform(0, 1, (x.shape[1]))
-    alpha = np.zeros(y.shape)
-    b = np.random.uniform(-1,1,1)
-    EPOCH = 1_000
-
-    # Computing the derivatives
-    for _ in range(EPOCH):
-        print("Accuracy {}".format(acc(w,b,x,y))) 
-        
-        '''
-        for sample in range(x.shape[0]):
-            val = y[sample] * (np.dot(x[sample,:], w) - b)
-            if val < 1:
-                w = w + lr * (y[sample] * x[sample,:] -2 * 1/EPOCH * w)
-            else:
-                w = w + lr * -2 * w * 1/EPOCH
-        '''
-
-    '''
-    count, success = 0, 0
-    for i in range(x.shape[0]):
-        success += int(np.sign(np.dot(x[i,:], w) - b)) == y[i][0]
-        count += 1
-
-    print("Succ: {}/{}".format(success, count))
-    '''
-
-
-data = pd.read_csv('data.txt')
-
-reduced = data[data['class'] <= 2]
-X = reduced.as_matrix(columns=['alcohol', 'ash'])
-y = label_binarize(reduced['class'].values, [1, 2])[:,0]
-
-Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.25, random_state = 42)
-Xtrain = Xtrain[:10,:]
-ytrain = ytrain[:10]
-
-# Plotting
-MARKERS = ['+', 'x', '.']
-COLORS = ['red', 'green', 'blue']
-
-
-ytrain = np.vectorize(lambda x: {0:-1,1:1}[x])(ytrain)
-gradient_descent(Xtrain, ytrain)
+w = perceptron_algorithm(X1, y)
+plot(X1,y,w)

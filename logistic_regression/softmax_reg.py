@@ -26,25 +26,25 @@ class SoftmaxRegression():
             x: data
             y: label
             K: number of class
-            C: regularizer coefficients
+            C: regularizer coefficients (L2)
             opti: Optimization choosen
         '''
         
         global MARKERS
         global COLORS
-        
         MARKERS = ['+', 'x', '.']
         COLORS = ['red', 'green', 'blue']
         
         N = x.shape[0]
         ones = np.ones((N, 1))
-        self.opti = opti
+        
         self.C = C
-        self.x = np.concatenate([x, ones], axis=-1)
         self.y = y
-        self.w = np.random.uniform(-1,1, (K, self.x.shape[1]))
         self.K = K
-
+        self.opti = opti
+        self.x = np.concatenate([x, ones], axis=-1)
+        self.w = np.random.uniform(-1,1, (K, self.x.shape[1]))
+ 
     def plot_boundaries(self,x,y):
         h = .01
         x_min, x_max  = np.min(x[:,0]) - 2, np.max(x[:,0]) + 2
@@ -66,12 +66,9 @@ class SoftmaxRegression():
 
     def _cost_function(self,x,y):
         n = x.shape[0] 
-        
         u = np.exp(x @ self.w.T)
         v = np.sum(u, axis=-1).reshape(-1,1)
-        
         softmax = u / v
-        
         # To avoid -inf error
         softmax += 0.001
         return - 1/n * np.sum(np.diag(np.log(softmax) @ y.T))
@@ -80,7 +77,6 @@ class SoftmaxRegression():
         n = x.shape[0] 
         u = np.exp(x @ self.w.T)
         v = np.sum(u, axis=-1).reshape(-1,1)
-        
         softmax = u / v
         true_label = y.argmax(axis=-1)
         predicted_label = softmax.argmax(axis=-1)
@@ -91,12 +87,14 @@ class SoftmaxRegression():
     def run(self):
         if self.opti == "gradient":
             self._gradient()
+        else:
+            raise ValueError("Unknown optimization")
     
 
     def _predict(self,x):
         ones = np.ones((x.shape[0], 1))
         x = np.concatenate((x,ones),axis=-1)
-         
+        
         u = np.exp(x @ self.w.T)
         v = np.sum(u, axis=-1).reshape(-1,1)
         
@@ -129,22 +127,29 @@ class SoftmaxRegression():
             softmax = u / v
             rhs = self.y - softmax
             gradient = np.zeros(self.w.shape)
-            
             # Could use vstack but for genericity we use a for
             for j in range(0,self.K):
                 gradient[j,:] = rhs[:,j] @ self.x
-            
+                
             gradient /= - N
-            
-
             # Add penalty
             gradient += self.C * self.w
-            
             self.w -= lr * gradient
 
         acc = self.score(self.x, self.y)
         print("Accurarcy train set: {0:.2f}".format(acc))
         
+def test_different_regularizer(C):
+    sr = SoftmaxRegression(Xtrain, ytrain, K, C=C)
+    sr.run()
+    ones = np.ones((X.shape[0], 1))
+    X_ones = np.concatenate([X,ones], axis=-1)
+
+    ones_test= np.ones((Xtest.shape[0], 1))
+    Xtest_ones = np.concatenate([Xtest,ones_test], axis=-1)
+    print("Accuracy test set: {0:.2f}".format(sr.score(Xtest_ones,ytest)))
+
+
 # Number of class
 K = 3
 
@@ -160,7 +165,6 @@ X = (X - mean) / std
 
 y = data.as_matrix(columns=['class'])
 y = label_binarize(y, range(1,K+1))
-
 Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.25,
 random_state=42)
 ytrain = label_binarize(ytrain, range(1, K+1))
@@ -173,19 +177,9 @@ print("ytest shape {}".format(ytest.shape))
 
 SLASH = 15
 print("-" * SLASH)
-
-def test_different_regularizer(C):
-    sr = SoftmaxRegression(Xtrain, ytrain, K, C=C)
-    sr.run()
-    ones = np.ones((X.shape[0], 1))
-    X_ones = np.concatenate([X,ones], axis=-1)
-
-    ones_test= np.ones((Xtest.shape[0], 1))
-    Xtest_ones = np.concatenate([Xtest,ones_test], axis=-1)
-    print("Accuracy test set: {0:.2f}".format(sr.score(Xtest_ones,ytest)))
-
+#test_different_regularizer(0.00)
 
 for C in [0,2,10,100]:
     print("-" *SLASH)
-    print("Testint for C={}".format(C))
+    print("Testing for C={}".format(C))
     test_different_regularizer(C)
