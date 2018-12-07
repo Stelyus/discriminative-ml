@@ -31,23 +31,36 @@ def perceptron_algorithm(x, y):
             if np.sign(res) != np.sign(y[i]):
                 ret.append(w)
                 points.append(i)
-                w = w + lr * np.sign(res) * res
+                w = update_weight(w,res,x[i],y[i],lr=lr)
+                
             if epoch % 100 == 0:
                 predict(x,y,w)
+    
+    # ret.append(w)
     return ret, points
 
+# TODO: Not really working
+def update_weight(weight, res, inp, y, lr=.01):
+    ret = lr * (y - res) * inp
+    ret = ret.reshape(-1,1)
+    # return weight + lr * np.sign(res) * res
+    return weight + ret
 
 def animation_perceptron(x,y):
     def animate(iteration):
         plt.clf()
         step = .01
-        w = ret[iteration].ravel()
+        w = ret[iteration].reshape(-1,1)
         i = points[iteration]
         pt = x[i]
         res = np.dot(w.reshape(3,),x[i])
+        
         print("w {}".format(w))
         print("sign y {}, sign res {}".format(np.sign(y[i]), np.sign(res)))
-        print("new weights: {}".format(w + .01 * np.sign(res) * res))
+        w = update_weight(w,res,pt,y[i])
+        
+        print("new weights: {}".format(w))
+        print()
         
         xmax, xmin = 11, -5
         ymax, ymin = 5, -13
@@ -68,9 +81,9 @@ def animation_perceptron(x,y):
     fig = plt.figure()
     ret, points = perceptron_algorithm(x,y)
     ani = animation.FuncAnimation(fig, animate, frames=len(ret),
-                                  blit=False, interval=200, repeat=False)
+                                  blit=False, interval=10, repeat=False)
     plt.show()
-    return ret[-1]
+    # return ret[-1]
 
 def predict(x,y,w):
     correct_pred = np.count_nonzero(np.sign(x @ w) == np.sign(y))
