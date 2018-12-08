@@ -29,8 +29,9 @@ y = y.reshape(-1,1)
 def gradient_descent(x, y, lr=.01):
     N, nb_var = x.shape
     w, b = np.zeros((nb_var, 1)) , 0
+    epoch = 10000
 
-    fow i in range(10000):
+    for i in range(epoch):
         error = mse(x,y,w, b)
         print("Error %s" % error)
 

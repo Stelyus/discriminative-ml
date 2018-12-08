@@ -79,8 +79,7 @@ class LogisticRegression():
         plt.show()
 
         
-    # Using Newton methods
-    def run(self,lr=.015, eps=.01, epoch=1_000):
+    def run(self,lr=.015, eps=.01, epoch=10_000):
         if self.opti == 'newton':
             self._newton(lr, eps, epoch)
         elif self.opti == 'gradient':
@@ -89,7 +88,7 @@ class LogisticRegression():
             raise ValueError("Wrong optimization")
     
 
-    def _gradient(self,lr,eps,epoch):
+    def _gradient(self,lr,eps,nb_epoch):
         n = self.x.shape[0]
         diff = eps + 1
         mapping = np.vectorize(lambda x: 0 if x < .5 else 1)
@@ -98,9 +97,11 @@ class LogisticRegression():
         succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
         print("Acc {}/{}".format(succ, n))
         
-        for _ in range(epoch):
+        for epoch in range(nb_epoch):
             cost = self._cost_function()
-            print("Error function {}".format(cost))
+            if epoch % (nb_epoch//10) == 0:
+                print("Epoch {} error function {}".format(epoch, cost))
+                
             pred = self._predict(self.x)
             gradient = np.dot(self.x.T, pred - self.y)
             
@@ -114,20 +115,19 @@ class LogisticRegression():
         print("Acc {}/{}".format(succ, n))
 
 
-    def _newton(self, lr, eps, epoch):
+    def _newton(self, lr, eps, nb_epoch):
         n, i = self.x.shape[0], 1
         diff = eps + 1
-
         mapping = np.vectorize(lambda x: 0 if x < .5 else 1)
-
         prediction = mapping(self._predict(self.x))
         succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
         print("Acc {}/{}".format(succ, n))
         
-        while i < epoch or diff > eps:
-            i += 1
+        while i < nb_epoch and diff > eps:
             cost = self._cost_function()
-            #print("Error function {}".format(cost))
+            if i % (nb_epoch//10) == 0:
+                print("Epoch {} error function {}".format(i, cost))
+            
             pred = self._predict(self.x)
             gradient = np.dot(self.x.T, pred - self.y)
 
@@ -136,32 +136,15 @@ class LogisticRegression():
             newton = np.linalg.inv(d2j) @ gradient
             self.w -= newton
             diff = np.linalg.norm(newton)
+            
+            i += 1
 
         # Prediction
         prediction = mapping(self._predict(self.x))
         succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
         print("Acc {}/{}".format(succ, n))
 
-data = pd.read_csv('data.txt')
-
-reduced = data[data['class'] <= 2]
-X = reduced.as_matrix(columns=['alcohol', 'ash'])
-y = label_binarize(reduced['class'].values, [1, 2])[:,0]
-
-Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.25, random_state = 44)
-print("Xtrain shape {}".format(Xtrain.shape))
-print("ytrain  shape {}".format(ytrain.shape))
-print("Xtest shape {}".format(Xtest.shape))
-print("ytest shape {}".format(ytest.shape))
-
-
-lg = LogisticRegression(Xtrain, ytrain, opti='gradient')
-lg.run()
-lg.plot_descision_boundary(X, y)
-
-
 '''
-
 print("Accurarcy: {}".format(accuracy_score(ytest, predictions)))
 print("Precision: {}".format(precision_score(ytest, predictions, average='macro')))
 print("Recall: {}".format(recall_score(ytest, predictions, average='macro')))
