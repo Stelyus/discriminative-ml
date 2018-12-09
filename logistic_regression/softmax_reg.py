@@ -9,7 +9,7 @@ from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
-np.seterr(all='print')
+#np.seterr(all='print')
 
 '''
 Softmax regression / Multinomial logistic regression
@@ -18,7 +18,6 @@ References:
     http://deeplearning.stanford.edu/tutorial/supervised/SoftmaxRegression/
     http://ufldl.stanford.edu/wiki/index.php/Softmax_Regression
 '''
-
 
 class SoftmaxRegression():
     def __init__(self,x,y,K,opti='gradient',C=.00):
@@ -38,7 +37,7 @@ class SoftmaxRegression():
         MARKERS = ['+', 'x', '.']
         COLORS = ['red', 'green', 'blue']
         
-        N = x.shape[0]
+        N,d = x.shape
         ones = np.ones((N, 1))
         
         self.C = C
@@ -76,17 +75,10 @@ class SoftmaxRegression():
         '''
             Here we are substracting with max to prevent overflow
             But it doesnt prevent underflow
-            
-            > exposant = x @ self.w.T
-            > exposant = exposant - np.max(exposant,axis=-1).reshape(-1,1)
-            > u = np.exp(exposant)
-            > v = np.sum(u, axis=-1).reshape(-1,1)
-            > return u/v
-            
-            It could also use normalization
         ''' 
-        x = (x - np.mean(x,axis=-1).reshape(-1,1)) / np.std(x, axis=-1).reshape(-1,1)
         exposant = x @ self.w.T
+        exposant = exposant - np.max(exposant,axis=-1).reshape(-1,1) 
+        
         u = np.exp(exposant)
         v = np.sum(u, axis=-1).reshape(-1,1)
         return u/v
@@ -95,8 +87,10 @@ class SoftmaxRegression():
     def _cost_function(self,x,y):
         n = x.shape[0] 
         softmax = self._softmax(x)
+        
         # To avoid -inf error
         softmax += 0.001
+        
         return - 1/n * np.sum(np.diag(np.log(softmax) @ y.T))
 
     def score(self,x,y):
@@ -122,7 +116,6 @@ class SoftmaxRegression():
 
     # Gradient descent
     def _gradient(self, epoch, lr=.01):
-        
         N = self.x.shape[0]
         acc = self.score(self.x,self.y)
         #print("Accurarcy train set: {0:.2f}".format(acc))
@@ -136,11 +129,14 @@ class SoftmaxRegression():
             '''
             
             softmax = self._softmax(self.x)
+            # shape rhs 133,3
             rhs = self.y - softmax
+            
             gradient = np.zeros(self.w.shape)
-            # Could use vstack but for genericity we use a for
+            
+            # Same as np.vstack
             for j in range(0,self.K):
-                gradient[j,:] = rhs[:,j] @ self.x
+                gradient[j,:] =  rhs[:,j] @ self.x
                 
             gradient /= - N
             # Add penalty
@@ -152,14 +148,14 @@ class SoftmaxRegression():
 
 
 def test_different_regularizer(C):
-    sr = SoftmaxRegression(Xtrain, ytrain, K, C=C)
+    sr = SoftmaxRegression(Xtrain, ytrain, K, C=0)
     sr.run()
     ones = np.ones((X.shape[0], 1))
     X_ones = np.concatenate([X,ones], axis=-1)
 
     ones_test= np.ones((Xtest.shape[0], 1))
     Xtest_ones = np.concatenate([Xtest,ones_test], axis=-1)
-    sr.plot_boundaries(Xtest, ytest)
+    #sr.plot_boundaries(Xtest, ytest)
     print("Accuracy test set: {0:.2f}".format(sr.score(Xtest_ones,ytest)))
 
 # Number of class
@@ -169,6 +165,7 @@ data = pd.read_csv('data.txt')
 X = data.as_matrix(columns=['alcohol', 'flavanoids'])
 #X = data.as_matrix()
 
+#X = (X - np.mean(X,axis=0)) / np.std(X, axis=0)
 y = data.as_matrix(columns=['class'])
 y = label_binarize(y, range(1,K+1))
 Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.25,
@@ -182,8 +179,8 @@ print("ytest shape {}".format(ytest.shape))
 SLASH = 15
 print("-" * SLASH)
 
-for C in [0]:
-    #for C in [0,2,10,100]:
+#for C in [0,2,10,100]:
+for C in [0,.01,1,10]:
     print("-" *SLASH)
     print("Testing for C={}".format(C))
     test_different_regularizer(C)
