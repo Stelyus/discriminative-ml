@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
-
 #np.seterr(all='print')
 
 '''
@@ -100,7 +99,7 @@ class SoftmaxRegression():
         predicted_label = softmax.argmax(axis=-1)
         prediction = np.count_nonzero(true_label == predicted_label)
         return prediction / y.shape[0]
-        
+
 
     def run(self, epoch=10_000):
         if self.opti == "gradient":
@@ -145,42 +144,3 @@ class SoftmaxRegression():
 
         acc = self.score(self.x, self.y)
         print("Accurarcy train set: {0:.2f}".format(acc))
-
-
-def test_different_regularizer(C):
-    sr = SoftmaxRegression(Xtrain, ytrain, K, C=0)
-    sr.run()
-    ones = np.ones((X.shape[0], 1))
-    X_ones = np.concatenate([X,ones], axis=-1)
-
-    ones_test= np.ones((Xtest.shape[0], 1))
-    Xtest_ones = np.concatenate([Xtest,ones_test], axis=-1)
-    #sr.plot_boundaries(Xtest, ytest)
-    print("Accuracy test set: {0:.2f}".format(sr.score(Xtest_ones,ytest)))
-
-# Number of class
-K = 3
-
-data = pd.read_csv('data.txt')
-X = data.as_matrix(columns=['alcohol', 'flavanoids'])
-#X = data.as_matrix()
-
-#X = (X - np.mean(X,axis=0)) / np.std(X, axis=0)
-y = data.as_matrix(columns=['class'])
-y = label_binarize(y, range(1,K+1))
-Xtrain, Xtest, ytrain, ytest = train_test_split(X, y, test_size=0.25,
-                                                random_state=42)
-print("Xtrain shape {}".format(Xtrain.shape))
-print("ytrain shape {}".format(ytrain.shape))
-
-print("Xtest shape {}".format(Xtest.shape))
-print("ytest shape {}".format(ytest.shape))
-
-SLASH = 15
-print("-" * SLASH)
-
-#for C in [0,2,10,100]:
-for C in [0,.01,1,10]:
-    print("-" *SLASH)
-    print("Testing for C={}".format(C))
-    test_different_regularizer(C)

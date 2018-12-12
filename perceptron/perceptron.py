@@ -37,7 +37,8 @@ def perceptron_algorithm(x, y):
     return ret, points
 
 def update_weight(weight, res, inp, y, lr=.01):
-    update  = (lr * (y - res) * inp).reshape(-1,1)
+    error = y - res
+    update  = (lr * error * inp).reshape(-1,1)
     print("update value {}".format(update))
     return weight + update
 

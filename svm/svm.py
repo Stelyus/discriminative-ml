@@ -5,39 +5,51 @@ import numpy as np
 from sklearn.datasets.samples_generator import make_blobs
 
 '''
-Hard margin only
+SMO algorithm
 
-Ref:
-    https://www.quora.com/How-does-a-SVM-choose-its-support-vectors
-    https://people.cs.pitt.edu/~milos/courses/cs2750-Spring03/lectures/class11.pdf
-    http://www.csc.kth.se/utbildning/kth/kurser/DD2427/bik12/DownloadMaterial/Lectures/Lecture9.pdf
+References:
+    http://fourier.eng.hmc.edu/e176/lectures/ch9/node9.html
 '''
 
-def score(x,y,w):
-  my_score = x @ w
-  my_score = np.count_nonzero(np.sign(my_score) == np.sign(y))
-  return my_score / y.shape[0]
 
+class SVM():
+    def __init__(self,x,y):
+        n,d = x.shape
+        
+        self.x = x
+        self.y = y
+        
+        # Init weight and bias
+        self.intercept = 0
+        self.w = np.random.uniform(-1,1,(d,1))
+        
+        # Positive lagrangian constraints
+        self.alpha= np.zeros((n,1))
+        return self
 
-'''
-    alphas n,1
-    x      n,d
-    y      n,1
-    w      d,1
-    
-'''
-def run(x,y,nb_epoch=10):
-    n,d = x.shape
-    # Init weight and bias
-    w, b = np.random.uniform(-1,1,(d,1)), 0
-    # Lagrangian constraints
-    alphas  = np.random.uniform(0,1,(n,1))
-    for epoch in range(nb_epoch):
-        my_score = score(x,y,w)
-        res = alphas * y * x
-        w = np.sum(res, axis=0).reshape(-1,1)
-        print("Score {} for epoch {}".format(my_score, epoch))
-    return w,b 
+    def _alpha_optimization(self,a1,y1,a2,y2):
+        if y1 == y2:
+            U = max(0,a1 + a2)
+            V = min(0, a1 + a2)
+        else:
+            U = max(0,a2 - a1)
+            V = min(0,-a1 + a2)
+            
+        a2 = (U + V) / 2
+        return a1, a2
+
+    def run(self, nb_epoch=10):
+        for epoch in range(nb_epoch):
+            assert np.sum(self.alpha * self.y.T) == 0
+            a1, a2 = self.alpha[:2].flatten()
+            y1, y2 = self.y[:2].flatten()
+            constant = y1 * a1 + y2 * a2
+            a1, a2 = self._alpha_optimization(a1,y1,a2,y2)
+            print("alpha {} {}".format(a1, a2))
+            print("y {} {}".format(y1, y2))
+            print("constant {}".format(constant))
+            exit(0)
+
 
 if __name__  == "__main__":
     X, y = make_blobs(n_samples=50, n_features=2, centers=2, cluster_std=1.05, random_state=40)
@@ -46,5 +58,6 @@ if __name__  == "__main__":
     y = y.reshape(-1,1)
     print("X.shape {}".format(X.shape))
     print("y.shape {}".format(y.shape))
-    print("-" * 10)
-    run(X,y)
+    print("-" * 15)
+    svm = SVM(X,y)
+    svm.run()

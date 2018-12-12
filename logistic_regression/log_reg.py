@@ -100,7 +100,10 @@ class LogisticRegression():
         for epoch in range(nb_epoch):
             cost = self._cost_function()
             if epoch % (nb_epoch//10) == 0:
-                print("Epoch {} error function {}".format(epoch, cost))
+                prediction = mapping(self._predict(self.x))
+                succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
+                print("Epoch {} error function {}, acc {}".format(epoch, cost,
+                succ/n))
                 
             pred = self._predict(self.x)
             gradient = np.dot(self.x.T, pred - self.y)
@@ -126,7 +129,10 @@ class LogisticRegression():
         while i < nb_epoch and diff > eps:
             cost = self._cost_function()
             if i % (nb_epoch//10) == 0:
-                print("Epoch {} error function {}".format(i, cost))
+                prediction = mapping(self._predict(self.x))
+                succ = np.count_nonzero(prediction.reshape(-1) == self.y.reshape(-1))
+                print("Epoch {} error function {}, acc {}".format(i, cost,
+                succ/n))
             
             pred = self._predict(self.x)
             gradient = np.dot(self.x.T, pred - self.y)
