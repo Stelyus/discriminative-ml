@@ -8,9 +8,9 @@ from sklearn.datasets.samples_generator import make_blobs
 SMO algorithm
 
 References:
+    http://fourier.eng.hmc.edu/e176/lectures/ch9/node6.html
     http://fourier.eng.hmc.edu/e176/lectures/ch9/node9.html
 '''
-
 
 class SVM():
     def __init__(self,x,y):
@@ -25,9 +25,23 @@ class SVM():
         
         # Positive lagrangian constraints
         self.alpha= np.zeros((n,1))
-        return self
+        
+        # Generating gram matrix
+        self.gram_matrix = self.x @ self.x.T
 
-    def _alpha_optimization(self,a1,y1,a2,y2):
+    def _alpha_optimization(self,i,j):
+        # 50,
+        tmp = self.alpha.reshape(-1) * self.y.reshape(-1) 
+        ret = tmp * self.x.T
+        
+        a1, a2 = self.x[i], self.x[j]
+        xxi = np.dot(self.x[i], self.x[i])
+        xxj = np.dot(self.x[j], self.x[j])
+        xxij = np.dot(self.x[i], self.x[j])
+       
+        L = a1 + a2 \
+            - .5 *  ((a1 ** 2) * xxi + (a2 ** 2) * xxj + 2 * a1 * a2 * xxij) \
+            - a1 * self.y[i] # * (np.sum(self.alpha))
         if y1 == y2:
             U = max(0,a1 + a2)
             V = min(0, a1 + a2)
@@ -37,14 +51,11 @@ class SVM():
             
         a2 = (U + V) / 2
         return a1, a2
-
+    
     def run(self, nb_epoch=10):
         for epoch in range(nb_epoch):
             assert np.sum(self.alpha * self.y.T) == 0
-            a1, a2 = self.alpha[:2].flatten()
-            y1, y2 = self.y[:2].flatten()
-            constant = y1 * a1 + y2 * a2
-            a1, a2 = self._alpha_optimization(a1,y1,a2,y2)
+            a1, a2 = self._alpha_optimization(0,1)
             print("alpha {} {}".format(a1, a2))
             print("y {} {}".format(y1, y2))
             print("constant {}".format(constant))

@@ -4,3 +4,4 @@
 * Linear regression  
 * SVM  
 * Logistic Regression  
+* Perceptron
