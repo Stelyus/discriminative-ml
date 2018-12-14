@@ -14,14 +14,16 @@ References:
     '''
 
 class SVM(object):
+    # Soft margin
     def __init__(self,x,y,C=1):
         n,d = x.shape
 
         self.x = x
         self.y = y
         self.C = C
-        
+
         # Init weight and bias
+        #TODO: Update intercept
         self.intercept = 0
         self.w = np.random.uniform(-1,1,(d,1))
     
@@ -31,18 +33,31 @@ class SVM(object):
         pos_count = np.count_nonzero(self.pos_arg)
         
         self.alpha = np.zeros((n,1))
+        # Initilizing them with non zero value while respecting the linear
+        # constraint
         self.alpha[self.neg_arg] = 1/neg_count
         self.alpha[self.pos_arg] = 1/pos_count
-        
-        # Generating gram matrix
-        self.gram_matrix = self.x @ self.x.T
 
+        self.max_digit = max(len(str(neg_count)), len(str(pos_count)))
 
-    def _assert_linear_contraint(self):
+    
+    # Using decimal library to avoid floating point approximation
+    def _sum(self, arr):
+        n = arr.shape[0]
+        ret = 0
+        power = np.power(10, self.max_digit)
+        for i in range(n):
+            ret +=  arr[i] * power
+        return ret
+
+    def _assert_linear_constraint(self):
         ret = np.diag(self.alpha @ self.y.T).reshape(-1,1)
-        assert np.sum(ret[self.pos_arg]) == -np.sum(ret[self.neg_arg])
 
-
+        pos_sum = self._sum(ret[self.pos_arg])
+        neg_sum = - self._sum(ret[self.neg_arg])
+    
+        assert pos_sum == neg_sum
+    
     def _prediction_optimization(self,xi):
         xi = xi.reshape(-1,1)
         gram_matrix = self.x @ xi
@@ -51,8 +66,27 @@ class SVM(object):
         ret = lhs.T @ gram_matrix + self.intercept
         return ret
 
+    # Heuristics for choosing which multipliers to optimize
+    def _heuristics(self):
+        n, d = self.x.shape 
+        x1, x2 = None, None
+        
+        for i in range(n):
+            ret = self.y[i] * self._prediction_optimization(self.x[i])
+            ai = self.alpha[i] 
+            
+            # Find those violates the KKT conditions
+            if (ret >= 1 and ai != 0) \
+                or (ret == 1 and (ai <= 0 or ai >= self.C)) \
+                or (ret <= 1 and ai != self.C):
+                if x1 is not None:
+                    x2 = i
+                    return x1, x2
+                else:
+                    x1 = i
+        return -1,-1
+    
     def _alpha_optimization(self,i,j):
-        # 50,
         tmp = self.alpha.reshape(-1) * self.y.reshape(-1) 
         ret = tmp * self.x.T
        
@@ -73,12 +107,13 @@ class SVM(object):
         # The second derivative of the objective function along the diagonal
         # line can be expressed as
         n = np.dot(x1,x1) + np.dot(x2,x2) - 2 * np.dot(x1, x2)
+        
+        # n should be positive for mathematical convenience
         assert n >= 0
 
         #TODO: May change to "- self.intercept"
         e1 = self._prediction_optimization(x1)
         e2 = self._prediction_optimization(x2)
-        e1 = y1 * a1 * np.dot(x1,x1) + self.intercept
         a2_new = a2 + (y2 * (e1 - e2)) / n
         
         if a2_new >= H:
@@ -88,20 +123,24 @@ class SVM(object):
 
         a1_new = a1 + y1 * y2 * (a2 - a2_new)
 
+        print("Optimizing {} {}".format(i,j))
+        print("y  value {} {}".format(y1,y2))
         print("Old value {} {}".format(a1,a2))
-        print("New value {} {}".format(a1_new, a2_new))
+        print("New value {} {}\n".format(a1_new, a2_new))
 
         self.alpha[i] = a1_new
         self.alpha[j] = a2_new
-
-        return a1_new, a2_new
     
-    def run(self, nb_epoch=10):
-        for epoch in range(nb_epoch):
-            self._assert_linear_contraint()
-            self._alpha_optimization(0,1)
-            exit(0)
-
+    def run(self):
+        while True:
+            # Checking the linear constraint sum alpha yi = 0
+            self._assert_linear_constraint()
+            # Getting the heuristics alphas
+            i,j = self._heuristics()
+            if i == j and i == -1:
+                break
+            # Optimize it
+            self._alpha_optimization(i,j)
 
 if __name__  == "__main__":
     X, y = make_blobs(n_samples=50, n_features=2, centers=2, cluster_std=1.05, random_state=40)
