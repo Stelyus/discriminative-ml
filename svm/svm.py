@@ -60,10 +60,10 @@ class SVM(object):
     
     def _prediction_optimization(self,xi):
         xi = xi.reshape(-1,1)
-        gram_matrix = self.x @ xi
         lhs = np.diag(self.y @ self.alpha.T)
-        
-        ret = lhs.T @ gram_matrix + self.intercept
+        print(lhs)
+        w  = np.sum((lhs * self.x.T).T, axis=0)
+        ret = np.dot(w, xi) + self.intercept
         return ret
 
     # Heuristics for choosing which multipliers to optimize
@@ -72,8 +72,12 @@ class SVM(object):
         x1, x2 = None, None
         
         for i in range(n):
-            ret = self.y[i] * self._prediction_optimization(self.x[i])
+            ret = self._prediction_optimization(self.x[i]) - y[i]
             ai = self.alpha[i] 
+
+            print("-- Heuristics --")
+            print(ret)
+            print(ai)
             
             # Find two alphas which violates the KKT conditions
             if (ret >= 1 and ai != 0) \
@@ -84,6 +88,8 @@ class SVM(object):
                     return x1, x2
                 else:
                     x1 = i
+        
+        # Not found
         return -1,-1
     
     def _alpha_optimization(self,i,j):
@@ -111,9 +117,8 @@ class SVM(object):
         # n should be positive for mathematical convenience
         assert n >= 0
 
-        #TODO: May change to "- self.intercept"
-        e1 = self._prediction_optimization(x1)
-        e2 = self._prediction_optimization(x2)
+        e1 = self._prediction_optimization(x1) - y1
+        e2 = self._prediction_optimization(x2) - y2
         a2_new = a2 + (y2 * (e1 - e2)) / n
         
         if a2_new >= H:
@@ -122,11 +127,26 @@ class SVM(object):
            a2_new = L
 
         a1_new = a1 + y1 * y2 * (a2 - a2_new)
+        
+        b1 = self.intercept - e1 + y1 * (a1_new - a1) * np.dot(x1,x1) \
+            - y2 * (a2_new -a2) * np.dot(x1,x2)
 
+        b2 = self.intercept - e2 + y1 * (a1_new - a1) * np.dot(x1,x2) \
+            - y2 * (a2_new -a2) * np.dot(x2,x2)
+
+        if a1_new > 0 and a1_new < self.C:
+            self.intercept = b1
+        elif a2_new > 0 and a2_new < self.C:
+            self.intercept = b2
+        else:
+            self.intercept = (b1 + b2) / 2
+            
         print("Optimizing {} {}".format(i,j))
         print("y  value {} {}".format(y1,y2))
-        print("Old value {} {}".format(a1,a2))
-        print("New value {} {}\n".format(a1_new, a2_new))
+        print("Old alpha value {} {}".format(a1,a2))
+        print("New alpha value {} {}\n".format(a1_new, a2_new))
+        print("Prediction value {} {}".format(e1,e2))
+        print("Intercept value {}".format(self.intercept))
 
         self.alpha[i] = a1_new
         self.alpha[j] = a2_new
@@ -139,17 +159,16 @@ class SVM(object):
          plt.show()
         
     def run(self):
-        through = set()
-        while True:
+        # TODO: Add tolerance
+        for _ in range(1000):
             # Checking the linear constraint sum alpha yi = 0
             self._assert_linear_constraint()
             # Getting the heuristics alphas
             i,j = self._heuristics()
-            if (i,j) in through or (i == j and i == -1):
+            if i == j and i == -1:
                 break
             # Optimize it
             self._alpha_optimization(i,j)
-            through.add((i,j))
         self._plot_sv()
 
 if __name__  == "__main__":
