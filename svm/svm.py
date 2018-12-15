@@ -75,7 +75,7 @@ class SVM(object):
             ret = self.y[i] * self._prediction_optimization(self.x[i])
             ai = self.alpha[i] 
             
-            # Find those violates the KKT conditions
+            # Find two alphas which violates the KKT conditions
             if (ret >= 1 and ai != 0) \
                 or (ret == 1 and (ai <= 0 or ai >= self.C)) \
                 or (ret <= 1 and ai != self.C):
@@ -131,16 +131,26 @@ class SVM(object):
         self.alpha[i] = a1_new
         self.alpha[j] = a2_new
     
+    # Plotting the support vectors
+    def _plot_sv(self): 
+         arg = np.where(self.alpha.reshape(-1) != 0.)
+         plt.scatter(self.x[:,0],self.x[:,1],c=self.y.reshape(-1))
+         plt.scatter(self.x[arg,0],self.x[arg,1],c='red')
+         plt.show()
+        
     def run(self):
+        through = set()
         while True:
             # Checking the linear constraint sum alpha yi = 0
             self._assert_linear_constraint()
             # Getting the heuristics alphas
             i,j = self._heuristics()
-            if i == j and i == -1:
+            if (i,j) in through or (i == j and i == -1):
                 break
             # Optimize it
             self._alpha_optimization(i,j)
+            through.add((i,j))
+        self._plot_sv()
 
 if __name__  == "__main__":
     X, y = make_blobs(n_samples=50, n_features=2, centers=2, cluster_std=1.05, random_state=40)
