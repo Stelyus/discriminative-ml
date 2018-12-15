@@ -35,21 +35,6 @@ class SVM(object):
         # Initilizing them with non zero value while respecting the linear
         # constraint
         self.alpha = np.zeros((n,1))
-        
-        #self.alpha[self.neg_arg] = 1/neg_count
-        #self.alpha[self.pos_arg] = 1/pos_count
-
-        self.max_digit = max(len(str(neg_count)), len(str(pos_count)))
-
-    
-    # Using decimal library to avoid floating point approximation
-    def _sum(self, arr):
-        n = arr.shape[0]
-        ret = 0
-        power = np.power(10, self.max_digit)
-        for i in range(n):
-            ret +=  arr[i] * power
-        return ret
 
     def _prediction_optimization(self,xi):
         xi = xi.reshape(-1,1)
@@ -111,13 +96,10 @@ class SVM(object):
         self.alpha[i] = a1_new
         self.alpha[j] = a2_new
 
-    def predict(self, X,show=False):
+    def predict(self, X):
         lhs = np.diag(self.y @ self.alpha.T)
         w  = np.sum((lhs * self.x.T).T, axis=0)
         ret = X @ w + self.intercept
-        if show:
-            print(ret)
-            print(self.alpha)
         return np.sign(ret)
     
     # Plotting the support vectors
@@ -151,7 +133,6 @@ class SVM(object):
             if np.linalg.norm(self.alpha - alpha_prev) < eps:
                 break
 
-        self.predict(X,show=True)
         self._plot_sv()
 
 if __name__  == "__main__":
