@@ -1,5 +1,6 @@
 #!/anaconda3/bin/python
 
+import random
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets.samples_generator import make_blobs
@@ -11,7 +12,7 @@ References:
     http://fourier.eng.hmc.edu/e176/lectures/ch9/node6.html
     http://fourier.eng.hmc.edu/e176/lectures/ch9/node9.html
     https://pdfs.semanticscholar.org/59ee/e096b49d66f39891eb88a6c84cc89acba12d.pdf?_ga=2.115831941.287013835.1544789908-1848930882.1544789908
-    '''
+'''
 
 class SVM(object):
     # Soft margin
@@ -32,11 +33,12 @@ class SVM(object):
         neg_count = np.count_nonzero(self.neg_arg)
         pos_count = np.count_nonzero(self.pos_arg)
         
-        self.alpha = np.zeros((n,1))
         # Initilizing them with non zero value while respecting the linear
         # constraint
-        self.alpha[self.neg_arg] = 1/neg_count
-        self.alpha[self.pos_arg] = 1/pos_count
+        self.alpha = np.zeros((n,1))
+        
+        #self.alpha[self.neg_arg] = 1/neg_count
+        #self.alpha[self.pos_arg] = 1/pos_count
 
         self.max_digit = max(len(str(neg_count)), len(str(pos_count)))
 
@@ -50,48 +52,13 @@ class SVM(object):
             ret +=  arr[i] * power
         return ret
 
-    def _assert_linear_constraint(self):
-        ret = np.diag(self.alpha @ self.y.T).reshape(-1,1)
-
-        pos_sum = self._sum(ret[self.pos_arg])
-        neg_sum = - self._sum(ret[self.neg_arg])
-    
-        assert pos_sum == neg_sum
-    
     def _prediction_optimization(self,xi):
         xi = xi.reshape(-1,1)
         lhs = np.diag(self.y @ self.alpha.T)
-        print(lhs)
         w  = np.sum((lhs * self.x.T).T, axis=0)
         ret = np.dot(w, xi) + self.intercept
         return ret
 
-    # Heuristics for choosing which multipliers to optimize
-    def _heuristics(self):
-        n, d = self.x.shape 
-        x1, x2 = None, None
-        
-        for i in range(n):
-            ret = self._prediction_optimization(self.x[i]) - y[i]
-            ai = self.alpha[i] 
-
-            print("-- Heuristics --")
-            print(ret)
-            print(ai)
-            
-            # Find two alphas which violates the KKT conditions
-            if (ret >= 1 and ai != 0) \
-                or (ret == 1 and (ai <= 0 or ai >= self.C)) \
-                or (ret <= 1 and ai != self.C):
-                if x1 is not None:
-                    x2 = i
-                    return x1, x2
-                else:
-                    x1 = i
-        
-        # Not found
-        return -1,-1
-    
     def _alpha_optimization(self,i,j):
         tmp = self.alpha.reshape(-1) * self.y.reshape(-1) 
         ret = tmp * self.x.T
@@ -115,60 +82,75 @@ class SVM(object):
         n = np.dot(x1,x1) + np.dot(x2,x2) - 2 * np.dot(x1, x2)
         
         # n should be positive for mathematical convenience
-        assert n >= 0
-
-        e1 = self._prediction_optimization(x1) - y1
-        e2 = self._prediction_optimization(x2) - y2
+        if n <= 0:
+            return
+        
+        e1 = (np.sign(self._prediction_optimization(x1)) - y1)[0]
+        e2 = (np.sign(self._prediction_optimization(x2)) - y2)[0]
         a2_new = a2 + (y2 * (e1 - e2)) / n
         
         if a2_new >= H:
            a2_new = H
         elif a2_new <= L:
            a2_new = L
-
-        a1_new = a1 + y1 * y2 * (a2 - a2_new)
         
-        b1 = self.intercept - e1 + y1 * (a1_new - a1) * np.dot(x1,x1) \
-            - y2 * (a2_new -a2) * np.dot(x1,x2)
+        a1_new = a1 + y1 * y2 * (a2 - a2_new)
 
-        b2 = self.intercept - e2 + y1 * (a1_new - a1) * np.dot(x1,x2) \
-            - y2 * (a2_new -a2) * np.dot(x2,x2)
 
-        if a1_new > 0 and a1_new < self.C:
-            self.intercept = b1
-        elif a2_new > 0 and a2_new < self.C:
-            self.intercept = b2
-        else:
-            self.intercept = (b1 + b2) / 2
+        # Updating intercept
+        w = np.dot(self.x.T, np.multiply(self.alpha,self.y))
+        b_tmp = y - np.dot(w.T, self.x.T)
+        self.intercept = np.mean(b_tmp)
             
         print("Optimizing {} {}".format(i,j))
         print("y  value {} {}".format(y1,y2))
         print("Old alpha value {} {}".format(a1,a2))
-        print("New alpha value {} {}\n".format(a1_new, a2_new))
+        print("New alpha value {} {}".format(a1_new, a2_new))
         print("Prediction value {} {}".format(e1,e2))
-        print("Intercept value {}".format(self.intercept))
+        print("Intercept value {}\n".format(self.intercept))
 
         self.alpha[i] = a1_new
         self.alpha[j] = a2_new
+
+    def predict(self, X):
+        lhs = np.diag(self.y @ self.alpha.T)
+        w  = np.sum((lhs * self.x.T).T, axis=0)
+        ret = X @ w + self.intercept
+        return np.sign(ret)
     
     # Plotting the support vectors
     def _plot_sv(self): 
-         arg = np.where(self.alpha.reshape(-1) != 0.)
-         plt.scatter(self.x[:,0],self.x[:,1],c=self.y.reshape(-1))
-         plt.scatter(self.x[arg,0],self.x[arg,1],c='red')
-         plt.show()
+        arg = np.where(self.alpha.reshape(-1) != 0.)
         
-    def run(self):
-        # TODO: Add tolerance
-        for _ in range(1000):
-            # Checking the linear constraint sum alpha yi = 0
-            self._assert_linear_constraint()
-            # Getting the heuristics alphas
-            i,j = self._heuristics()
-            if i == j and i == -1:
+        xmax,xmin = np.max(X[:,0]) + 1, np.min(X[:,0]) - 1
+        ymax,ymin = np.max(X[:,1]) + 1, np.min(X[:,1]) - 1
+        xx, yy = np.meshgrid(np.arange(xmin,xmax,0.01), np.arange(ymin,ymax,0.01))
+        xy_pairs = np.c_[(xx.ravel(),yy.ravel())]
+        yhat = self.predict(xy_pairs)
+
+        plt.contour(xx, yy, yhat.reshape(xx.shape))
+        plt.scatter(self.x[:,0],self.x[:,1],c=self.y.reshape(-1))
+        plt.scatter(self.x[arg,0],self.x[arg,1],c='red')
+
+        plt.show()
+        
+    def run(self, eps=1e-6):
+        n,d  = self.x.shape
+        loop  = 0
+        while True:
+            loop += 1 
+            for i in range(0,n):
+                alpha_prev = np.copy(self.alpha)
+                j = i
+                while i == j:
+                    j = random.randint(0,n-1)
+                    
+                # Optimize it
+                self._alpha_optimization(i,j)
+                
+            if np.linalg.norm(self.alpha - alpha_prev) < eps:
                 break
-            # Optimize it
-            self._alpha_optimization(i,j)
+
         self._plot_sv()
 
 if __name__  == "__main__":
