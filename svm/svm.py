@@ -24,7 +24,6 @@ class SVM(object):
         self.C = C
 
         # Init weight and bias
-        #TODO: Update intercept
         self.intercept = 0
         self.w = np.random.uniform(-1,1,(d,1))
     
@@ -112,10 +111,13 @@ class SVM(object):
         self.alpha[i] = a1_new
         self.alpha[j] = a2_new
 
-    def predict(self, X):
+    def predict(self, X,show=False):
         lhs = np.diag(self.y @ self.alpha.T)
         w  = np.sum((lhs * self.x.T).T, axis=0)
         ret = X @ w + self.intercept
+        if show:
+            print(ret)
+            print(self.alpha)
         return np.sign(ret)
     
     # Plotting the support vectors
@@ -128,7 +130,7 @@ class SVM(object):
         xy_pairs = np.c_[(xx.ravel(),yy.ravel())]
         yhat = self.predict(xy_pairs)
 
-        plt.contour(xx, yy, yhat.reshape(xx.shape))
+        plt.contour(xx, yy, yhat.reshape(xx.shape),colors='black')
         plt.scatter(self.x[:,0],self.x[:,1],c=self.y.reshape(-1))
         plt.scatter(self.x[arg,0],self.x[arg,1],c='red')
 
@@ -136,9 +138,7 @@ class SVM(object):
         
     def run(self, eps=1e-6):
         n,d  = self.x.shape
-        loop  = 0
         while True:
-            loop += 1 
             for i in range(0,n):
                 alpha_prev = np.copy(self.alpha)
                 j = i
@@ -147,15 +147,15 @@ class SVM(object):
                     
                 # Optimize it
                 self._alpha_optimization(i,j)
-                
+                    
             if np.linalg.norm(self.alpha - alpha_prev) < eps:
                 break
 
+        self.predict(X,show=True)
         self._plot_sv()
 
 if __name__  == "__main__":
-    X, y = make_blobs(n_samples=50, n_features=2, centers=2, cluster_std=1.05, random_state=40)
-    #X1 = np.c_[np.ones((X.shape[0])), X] 
+    X, y = make_blobs(n_samples=10, n_features=2, centers=2, cluster_std=1.05, random_state=40)
     y = np.vectorize(lambda x: 1 if x == 1 else -1)(y)
     y = y.reshape(-1,1)
     print("X.shape {}".format(X.shape))
